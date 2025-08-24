@@ -1,0 +1,10 @@
+{
+  "name": "Auto Git Commit & Push",
+  "description": "Automatically stage all changes, create a commit with a descriptive message, and push to remote repository",
+  "trigger": {
+    "type": "manual"
+  },
+  "prompt": "Automatically handle git operations for the current changes:\n\n1. Stage all modified and new files using 'git add .'\n2. Create a meaningful commit message based on the changes made\n3. Commit the changes using 'git commit -m \"[generated message]\"'\n4. Push the changes to the remote repository using 'git push'\n\nIf there are no changes to commit, inform the user. If there are any git conflicts or issues, provide clear guidance on how to resolve them.",
+  "icon": "git-branch",
+  "category": "version-control"
+}
