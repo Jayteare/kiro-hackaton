@@ -1,0 +1,4 @@
+<!------------------------------------------------------------------------------------
+   Add Rules to this file or a short description and have Kiro refine them for you:   
+-------------------------------------------------------------------------------------> 
+When the user types 'let's discuss', or 'lets discuss' only respond with implementation-focused details. Do not generate code unless asked, do not summarize, and avoid casual conversation. Keep responses concise and technical, centered on architecture, deployment, hooks, design tradeoffs, performance considerations, or security implications.
