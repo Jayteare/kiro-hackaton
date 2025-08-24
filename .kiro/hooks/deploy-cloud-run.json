@@ -1,0 +1,10 @@
+{
+  "name": "Deploy to Cloud Run",
+  "description": "Deploy Python application to Google Cloud Run using gcloud CLI",
+  "trigger": {
+    "type": "manual"
+  },
+  "prompt": "Deploy this Python application to Google Cloud Run using the Google Cloud CLI. Please:\n\n1. Check if gcloud CLI is installed and authenticated\n2. Build and deploy the application to Cloud Run\n3. Use appropriate Cloud Run configuration for a Python application\n4. Set up necessary environment variables and service configuration\n5. Provide the deployed service URL\n\nEnsure the deployment follows Google Cloud Run best practices for Python applications.",
+  "icon": "cloud",
+  "category": "deployment"
+}

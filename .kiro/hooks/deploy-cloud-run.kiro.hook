@@ -1,0 +1,21 @@
+{
+  "enabled": true,
+  "name": "Deploy Cloud Run",
+  "description": "Automatically deploys application to Google Cloud Run using gcloud CLI when deployment configuration files are modified",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "Dockerfile",
+      "cloudbuild.yaml",
+      "app.yaml",
+      "service.yaml",
+      "deployment.yaml",
+      "*.dockerfile"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "The deployment configuration files have been updated. Please deploy the application to Google Cloud Run using the gcloud CLI. Check the modified files and execute the appropriate gcloud run deploy command with the correct service name, region, and configuration parameters."
+  }
+}

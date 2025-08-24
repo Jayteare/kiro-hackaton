@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Git Auto Push",
+  "description": "Automatically commits and pushes changes to GitHub when any file in the repository is modified",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Files have been modified in the repository. Please stage all changes, create a commit with an appropriate message describing the changes, and push to the remote GitHub repository."
+  }
+}
