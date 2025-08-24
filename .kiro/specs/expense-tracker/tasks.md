@@ -11,7 +11,11 @@
   - Create configuration classes for development, testing, and production environments
   - _Requirements: 7.1, 7.2_
 
-- [ ] 2. Implement core data models and database setup
+- [x] 2. Implement core data models and database setup
+
+
+
+
 
   - Create SQLAlchemy Expense model with validation constraints
   - Implement database initialization and migration scripts
