@@ -17,7 +17,7 @@ class ExpenseSchema(Schema):
         required=True,
         places=2,
         as_string=True,
-        validate=validate.Range(min=0.01, error="Amount must be positive"),
+        validate=validate.Range(min=Decimal('0.01'), error="Amount must be positive"),
         metadata={"doc": "Expense amount (positive decimal)"}
     )
     description = fields.String(
@@ -107,7 +107,7 @@ class ExpenseCreateSchema(Schema):
         required=True,
         places=2,
         as_string=True,
-        validate=validate.Range(min=0.01, error="Amount must be positive"),
+        validate=validate.Range(min=Decimal('0.01'), error="Amount must be positive"),
         metadata={"doc": "Expense amount (positive decimal)"}
     )
     description = fields.String(
@@ -186,7 +186,7 @@ class ExpenseUpdateSchema(Schema):
     amount = fields.Decimal(
         places=2,
         as_string=True,
-        validate=validate.Range(min=0.01, error="Amount must be positive"),
+        validate=validate.Range(min=Decimal('0.01'), error="Amount must be positive"),
         metadata={"doc": "Expense amount (positive decimal)"}
     )
     description = fields.String(
@@ -243,3 +243,59 @@ class ExpenseUpdateSchema(Schema):
             data['description'] = str(data['description']).strip()
         
         return data
+
+
+class CategorySummarySchema(Schema):
+    """
+    Schema for individual category summary in expense summary response.
+    """
+    category = fields.String(
+        required=True,
+        metadata={"doc": "Category name"}
+    )
+    amount = fields.Float(
+        required=True,
+        metadata={"doc": "Total amount for this category"}
+    )
+    count = fields.Integer(
+        required=True,
+        metadata={"doc": "Number of expenses in this category"}
+    )
+
+
+class DateRangeSchema(Schema):
+    """
+    Schema for date range in summary response.
+    """
+    start = fields.String(
+        allow_none=True,
+        metadata={"doc": "Start date of the range (ISO format)"}
+    )
+    end = fields.String(
+        allow_none=True,
+        metadata={"doc": "End date of the range (ISO format)"}
+    )
+
+
+class ExpenseSummarySchema(Schema):
+    """
+    Schema for expense summary response.
+    """
+    total_amount = fields.Float(
+        required=True,
+        metadata={"doc": "Total amount of all expenses"}
+    )
+    expense_count = fields.Integer(
+        required=True,
+        metadata={"doc": "Total number of expenses"}
+    )
+    date_range = fields.Nested(
+        DateRangeSchema,
+        required=True,
+        metadata={"doc": "Date range for the summary"}
+    )
+    categories = fields.List(
+        fields.Nested(CategorySummarySchema),
+        required=True,
+        metadata={"doc": "Category breakdown of expenses"}
+    )

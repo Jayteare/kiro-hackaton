@@ -23,3 +23,12 @@ def client(app):
 def runner(app):
     """Create test CLI runner."""
     return app.test_cli_runner()
+
+
+# Import fixtures from fixtures.py
+from tests.fixtures import (
+    ExpenseFactory, ValidationTestData, APITestData,
+    sample_expense_data, multiple_expense_data, created_expenses,
+    expense_factory, validation_data, api_test_data,
+    performance_dataset, edge_case_expenses, date_range_expenses
+)

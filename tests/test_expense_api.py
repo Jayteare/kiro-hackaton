@@ -839,6 +839,347 @@ class TestExpenseRetrieval:
                 assert field in expense
 
 
+class TestCategoryManagement:
+    """Test category management endpoints."""
+    
+    def test_get_categories_empty(self, client):
+        """Test getting categories when no expenses exist."""
+        response = client.get('/api/categories')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert 'categories' in data
+        assert data['categories'] == []
+    
+    def test_get_categories_with_expenses(self, client):
+        """Test getting categories when expenses exist."""
+        # Create expenses with different categories
+        expenses_data = [
+            {
+                'amount': '25.50',
+                'description': 'Coffee',
+                'category': 'Food'
+            },
+            {
+                'amount': '15.00',
+                'description': 'Bus ticket',
+                'category': 'Transport'
+            },
+            {
+                'amount': '100.00',
+                'description': 'Groceries',
+                'category': 'Food'  # Duplicate category
+            },
+            {
+                'amount': '50.00',
+                'description': 'Gas bill',
+                'category': 'Utilities'
+            },
+            {
+                'amount': '30.00',
+                'description': 'Movie tickets'
+                # No category - should default to Uncategorized
+            }
+        ]
+        
+        for expense_data in expenses_data:
+            response = client.post(
+                '/api/expenses',
+                data=json.dumps(expense_data),
+                content_type='application/json'
+            )
+            assert response.status_code == 201
+        
+        # Get categories
+        response = client.get('/api/categories')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert 'categories' in data
+        categories = data['categories']
+        
+        # Should have unique categories, sorted alphabetically
+        expected_categories = ['Food', 'Transport', 'Uncategorized', 'Utilities']
+        assert sorted(categories) == sorted(expected_categories)
+        assert len(categories) == len(expected_categories)
+        
+        # Verify no duplicates
+        assert len(categories) == len(set(categories))
+    
+    def test_get_categories_includes_uncategorized(self, client):
+        """Test that Uncategorized is included when there are expenses."""
+        # Create expense with explicit category
+        expense_data = {
+            'amount': '25.50',
+            'description': 'Coffee',
+            'category': 'Food'
+        }
+        
+        response = client.post(
+            '/api/expenses',
+            data=json.dumps(expense_data),
+            content_type='application/json'
+        )
+        assert response.status_code == 201
+        
+        # Get categories
+        response = client.get('/api/categories')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        categories = data['categories']
+        # Should include Uncategorized even if no expenses use it
+        assert 'Uncategorized' in categories
+        assert 'Food' in categories
+    
+    def test_get_categories_sorted(self, client):
+        """Test that categories are returned in sorted order."""
+        # Create expenses with categories in random order
+        categories_to_create = ['Zebra', 'Apple', 'Banana', 'Aardvark']
+        
+        for i, category in enumerate(categories_to_create):
+            expense_data = {
+                'amount': f'{10 + i}.00',
+                'description': f'Test expense {i}',
+                'category': category
+            }
+            
+            response = client.post(
+                '/api/expenses',
+                data=json.dumps(expense_data),
+                content_type='application/json'
+            )
+            assert response.status_code == 201
+        
+        # Get categories
+        response = client.get('/api/categories')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        categories = data['categories']
+        
+        # Should be sorted alphabetically
+        expected_sorted = sorted(['Aardvark', 'Apple', 'Banana', 'Uncategorized', 'Zebra'])
+        assert categories == expected_sorted
+    
+    def test_expense_filtering_by_category(self, client):
+        """Test that expense filtering by category works correctly."""
+        # Create expenses with different categories
+        expenses_data = [
+            {
+                'amount': '25.50',
+                'description': 'Coffee',
+                'category': 'Food',
+                'date': '2025-01-15T10:30:00Z'
+            },
+            {
+                'amount': '15.00',
+                'description': 'Bus ticket',
+                'category': 'Transport',
+                'date': '2025-01-14T08:00:00Z'
+            },
+            {
+                'amount': '100.00',
+                'description': 'Groceries',
+                'category': 'Food',
+                'date': '2025-01-13T18:00:00Z'
+            },
+            {
+                'amount': '30.00',
+                'description': 'Movie tickets'
+                # No category - should default to Uncategorized
+            }
+        ]
+        
+        for expense_data in expenses_data:
+            response = client.post(
+                '/api/expenses',
+                data=json.dumps(expense_data),
+                content_type='application/json'
+            )
+            assert response.status_code == 201
+        
+        # Test filtering by Food category
+        response = client.get('/api/expenses?category=Food')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert len(data['expenses']) == 2
+        assert data['pagination']['total_count'] == 2
+        
+        for expense in data['expenses']:
+            assert expense['category'] == 'Food'
+        
+        # Verify specific expenses
+        descriptions = [expense['description'] for expense in data['expenses']]
+        assert 'Coffee' in descriptions
+        assert 'Groceries' in descriptions
+        
+        # Test filtering by Transport category
+        response = client.get('/api/expenses?category=Transport')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert len(data['expenses']) == 1
+        assert data['expenses'][0]['category'] == 'Transport'
+        assert data['expenses'][0]['description'] == 'Bus ticket'
+        
+        # Test filtering by Uncategorized
+        response = client.get('/api/expenses?category=Uncategorized')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert len(data['expenses']) == 1
+        assert data['expenses'][0]['category'] == 'Uncategorized'
+        assert data['expenses'][0]['description'] == 'Movie tickets'
+        
+        # Test filtering by non-existent category
+        response = client.get('/api/expenses?category=NonExistent')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert len(data['expenses']) == 0
+        assert data['pagination']['total_count'] == 0
+    
+    def test_category_filtering_with_pagination(self, client):
+        """Test category filtering combined with pagination."""
+        # Create multiple Food expenses
+        for i in range(5):
+            expense_data = {
+                'amount': f'{10 + i}.00',
+                'description': f'Food item {i}',
+                'category': 'Food'
+            }
+            
+            response = client.post(
+                '/api/expenses',
+                data=json.dumps(expense_data),
+                content_type='application/json'
+            )
+            assert response.status_code == 201
+        
+        # Create one Transport expense
+        expense_data = {
+            'amount': '20.00',
+            'description': 'Transport item',
+            'category': 'Transport'
+        }
+        
+        response = client.post(
+            '/api/expenses',
+            data=json.dumps(expense_data),
+            content_type='application/json'
+        )
+        assert response.status_code == 201
+        
+        # Test pagination with category filter
+        response = client.get('/api/expenses?category=Food&page=1&per_page=2')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert len(data['expenses']) == 2
+        assert data['pagination']['total_count'] == 5  # Total Food items
+        assert data['pagination']['total_pages'] == 3  # 5 items / 2 per page = 3 pages
+        assert data['pagination']['has_next'] is True
+        assert data['pagination']['has_prev'] is False
+        
+        for expense in data['expenses']:
+            assert expense['category'] == 'Food'
+        
+        # Test second page
+        response = client.get('/api/expenses?category=Food&page=2&per_page=2')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert len(data['expenses']) == 2
+        assert data['pagination']['page'] == 2
+        assert data['pagination']['has_next'] is True
+        assert data['pagination']['has_prev'] is True
+        
+        # Test last page
+        response = client.get('/api/expenses?category=Food&page=3&per_page=2')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert len(data['expenses']) == 1  # Only 1 item on last page
+        assert data['pagination']['page'] == 3
+        assert data['pagination']['has_next'] is False
+        assert data['pagination']['has_prev'] is True
+    
+    def test_category_filtering_case_sensitivity(self, client):
+        """Test that category filtering is case sensitive."""
+        # Create expense with specific case
+        expense_data = {
+            'amount': '25.50',
+            'description': 'Test expense',
+            'category': 'Food'  # Capital F
+        }
+        
+        response = client.post(
+            '/api/expenses',
+            data=json.dumps(expense_data),
+            content_type='application/json'
+        )
+        assert response.status_code == 201
+        
+        # Filter with exact case should work
+        response = client.get('/api/expenses?category=Food')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert len(data['expenses']) == 1
+        
+        # Filter with different case should not match
+        response = client.get('/api/expenses?category=food')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert len(data['expenses']) == 0  # No match due to case difference
+    
+    def test_categories_response_structure(self, client):
+        """Test that categories endpoint returns correct response structure."""
+        # Create a sample expense
+        expense_data = {
+            'amount': '25.50',
+            'description': 'Test expense',
+            'category': 'Food'
+        }
+        
+        response = client.post(
+            '/api/expenses',
+            data=json.dumps(expense_data),
+            content_type='application/json'
+        )
+        assert response.status_code == 201
+        
+        # Get categories
+        response = client.get('/api/categories')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Check response structure
+        assert isinstance(data, dict)
+        assert 'categories' in data
+        assert isinstance(data['categories'], list)
+        
+        # Check that all items in categories list are strings
+        for category in data['categories']:
+            assert isinstance(category, str)
+            assert len(category.strip()) > 0  # No empty categories
+
+
 class TestExpenseUpdate:
     """Test expense update endpoint."""
     
@@ -1575,3 +1916,388 @@ class TestExpenseDeletion:
         assert response.content_length == 0 or response.content_length is None
         # Response should have no body
         assert len(response.data) == 0
+
+
+class TestExpenseSummary:
+    """Test expense summary endpoint."""
+    
+    def create_sample_expenses_for_summary(self, client):
+        """Helper method to create sample expenses for summary testing."""
+        expenses_data = [
+            {
+                'amount': '25.50',
+                'description': 'Coffee and pastry',
+                'category': 'Food',
+                'date': '2025-01-15T10:30:00Z'
+            },
+            {
+                'amount': '15.00',
+                'description': 'Bus ticket',
+                'category': 'Transport',
+                'date': '2025-01-14T08:00:00Z'
+            },
+            {
+                'amount': '100.00',
+                'description': 'Groceries',
+                'category': 'Food',
+                'date': '2025-01-13T18:00:00Z'
+            },
+            {
+                'amount': '50.00',
+                'description': 'Gas bill',
+                'category': 'Utilities',
+                'date': '2025-01-12T12:00:00Z'
+            },
+            {
+                'amount': '30.00',
+                'description': 'Movie tickets',
+                'category': 'Entertainment',
+                'date': '2025-01-11T20:00:00Z'
+            },
+            {
+                'amount': '75.25',
+                'description': 'Dinner',
+                'category': 'Food',
+                'date': '2025-01-10T19:00:00Z'
+            }
+        ]
+        
+        created_expenses = []
+        for expense_data in expenses_data:
+            response = client.post(
+                '/api/expenses',
+                data=json.dumps(expense_data),
+                content_type='application/json'
+            )
+            assert response.status_code == 201
+            created_expenses.append(json.loads(response.data))
+        
+        return created_expenses
+    
+    def test_get_summary_empty(self, client):
+        """Test getting summary when no expenses exist."""
+        response = client.get('/api/expenses/summary')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert 'total_amount' in data
+        assert 'expense_count' in data
+        assert 'date_range' in data
+        assert 'categories' in data
+        
+        assert data['total_amount'] == 0.0
+        assert data['expense_count'] == 0
+        assert data['categories'] == []
+        assert data['date_range']['start'] is None
+        assert data['date_range']['end'] is None
+    
+    def test_get_summary_success(self, client):
+        """Test successful expense summary retrieval."""
+        # Create sample expenses
+        self.create_sample_expenses_for_summary(client)
+        
+        response = client.get('/api/expenses/summary')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Verify response structure
+        assert 'total_amount' in data
+        assert 'expense_count' in data
+        assert 'date_range' in data
+        assert 'categories' in data
+        
+        # Verify totals (25.50 + 15.00 + 100.00 + 50.00 + 30.00 + 75.25 = 295.75)
+        assert data['total_amount'] == 295.75
+        assert data['expense_count'] == 6
+        
+        # Verify categories are present and sorted by amount (descending)
+        categories = data['categories']
+        assert len(categories) == 4  # Food, Transport, Utilities, Entertainment
+        
+        # Food should be first (highest total: 25.50 + 100.00 + 75.25 = 200.75)
+        food_category = next(cat for cat in categories if cat['category'] == 'Food')
+        assert food_category['amount'] == 200.75
+        assert food_category['count'] == 3
+        
+        # Utilities should be second (50.00)
+        utilities_category = next(cat for cat in categories if cat['category'] == 'Utilities')
+        assert utilities_category['amount'] == 50.0
+        assert utilities_category['count'] == 1
+        
+        # Entertainment should be third (30.00)
+        entertainment_category = next(cat for cat in categories if cat['category'] == 'Entertainment')
+        assert entertainment_category['amount'] == 30.0
+        assert entertainment_category['count'] == 1
+        
+        # Transport should be last (15.00)
+        transport_category = next(cat for cat in categories if cat['category'] == 'Transport')
+        assert transport_category['amount'] == 15.0
+        assert transport_category['count'] == 1
+        
+        # Verify categories are sorted by amount (descending)
+        category_amounts = [cat['amount'] for cat in categories]
+        assert category_amounts == sorted(category_amounts, reverse=True)
+    
+    def test_get_summary_with_date_range(self, client):
+        """Test expense summary with date range filtering."""
+        # Create sample expenses
+        self.create_sample_expenses_for_summary(client)
+        
+        # Filter by date range (Jan 12-14)
+        response = client.get('/api/expenses/summary?start_date=2025-01-12T00:00:00Z&end_date=2025-01-14T23:59:59Z')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Should include: Gas bill (50.00), Groceries (100.00), Bus ticket (15.00) = 165.00
+        assert data['total_amount'] == 165.0
+        assert data['expense_count'] == 3
+        
+        # Verify date range in response
+        assert data['date_range']['start'] == '2025-01-12T00:00:00+00:00'
+        assert data['date_range']['end'] == '2025-01-14T23:59:59+00:00'
+        
+        # Verify categories
+        categories = data['categories']
+        assert len(categories) == 3  # Food, Transport, Utilities
+        
+        food_category = next(cat for cat in categories if cat['category'] == 'Food')
+        assert food_category['amount'] == 100.0  # Only Groceries
+        assert food_category['count'] == 1
+    
+    def test_get_summary_with_start_date_only(self, client):
+        """Test expense summary with start date only."""
+        # Create sample expenses
+        self.create_sample_expenses_for_summary(client)
+        
+        # Filter from Jan 13 onwards
+        response = client.get('/api/expenses/summary?start_date=2025-01-13T00:00:00Z')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Should include: Coffee (25.50), Bus ticket (15.00), Groceries (100.00) = 140.50
+        assert data['total_amount'] == 140.5
+        assert data['expense_count'] == 3
+        
+        # Verify date range
+        assert data['date_range']['start'] == '2025-01-13T00:00:00+00:00'
+        assert data['date_range']['end'] is None
+    
+    def test_get_summary_with_end_date_only(self, client):
+        """Test expense summary with end date only."""
+        # Create sample expenses
+        self.create_sample_expenses_for_summary(client)
+        
+        # Filter until Jan 12
+        response = client.get('/api/expenses/summary?end_date=2025-01-12T23:59:59Z')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Should include: Gas bill (50.00), Movie tickets (30.00), Dinner (75.25) = 155.25
+        assert data['total_amount'] == 155.25
+        assert data['expense_count'] == 3
+        
+        # Verify date range
+        assert data['date_range']['start'] is None
+        assert data['date_range']['end'] == '2025-01-12T23:59:59+00:00'
+    
+    def test_get_summary_invalid_date_format(self, client):
+        """Test expense summary with invalid date format."""
+        response = client.get('/api/expenses/summary?start_date=invalid-date')
+        
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        
+        assert 'error' in data
+        assert data['error']['code'] == 'INVALID_PARAMETERS'
+        assert 'Invalid date parameters' in data['error']['message']
+    
+    def test_get_summary_invalid_date_range(self, client):
+        """Test expense summary with invalid date range (start > end)."""
+        response = client.get('/api/expenses/summary?start_date=2025-01-15T00:00:00Z&end_date=2025-01-10T00:00:00Z')
+        
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        
+        assert 'error' in data
+        assert data['error']['code'] == 'VALIDATION_ERROR'
+        assert 'Start date must be before or equal to end date' in data['error']['message']
+    
+    def test_get_summary_single_category(self, client):
+        """Test expense summary with expenses in single category."""
+        # Create expenses only in Food category
+        expenses_data = [
+            {
+                'amount': '25.50',
+                'description': 'Coffee',
+                'category': 'Food',
+                'date': '2025-01-15T10:30:00Z'
+            },
+            {
+                'amount': '100.00',
+                'description': 'Groceries',
+                'category': 'Food',
+                'date': '2025-01-13T18:00:00Z'
+            }
+        ]
+        
+        for expense_data in expenses_data:
+            response = client.post(
+                '/api/expenses',
+                data=json.dumps(expense_data),
+                content_type='application/json'
+            )
+            assert response.status_code == 201
+        
+        response = client.get('/api/expenses/summary')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert data['total_amount'] == 125.5
+        assert data['expense_count'] == 2
+        assert len(data['categories']) == 1
+        
+        category = data['categories'][0]
+        assert category['category'] == 'Food'
+        assert category['amount'] == 125.5
+        assert category['count'] == 2
+    
+    def test_get_summary_uncategorized_expenses(self, client):
+        """Test expense summary with uncategorized expenses."""
+        # Create expenses without category (should default to Uncategorized)
+        expenses_data = [
+            {
+                'amount': '25.50',
+                'description': 'Random expense 1'
+            },
+            {
+                'amount': '15.00',
+                'description': 'Random expense 2'
+            }
+        ]
+        
+        for expense_data in expenses_data:
+            response = client.post(
+                '/api/expenses',
+                data=json.dumps(expense_data),
+                content_type='application/json'
+            )
+            assert response.status_code == 201
+        
+        response = client.get('/api/expenses/summary')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert data['total_amount'] == 40.5
+        assert data['expense_count'] == 2
+        assert len(data['categories']) == 1
+        
+        category = data['categories'][0]
+        assert category['category'] == 'Uncategorized'
+        assert category['amount'] == 40.5
+        assert category['count'] == 2
+    
+    def test_get_summary_amount_precision(self, client):
+        """Test expense summary with various amount precisions."""
+        # Create expenses with different decimal precisions
+        expenses_data = [
+            {
+                'amount': '10.123',  # Should round to 10.12
+                'description': 'Test 1'
+            },
+            {
+                'amount': '20.999',  # Should round to 21.00
+                'description': 'Test 2'
+            },
+            {
+                'amount': '5.555',   # Should round to 5.56
+                'description': 'Test 3'
+            }
+        ]
+        
+        for expense_data in expenses_data:
+            response = client.post(
+                '/api/expenses',
+                data=json.dumps(expense_data),
+                content_type='application/json'
+            )
+            assert response.status_code == 201
+        
+        response = client.get('/api/expenses/summary')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Total should be 10.12 + 21.00 + 5.56 = 36.68
+        assert data['total_amount'] == 36.68
+        assert data['expense_count'] == 3
+    
+    def test_get_summary_response_structure(self, client):
+        """Test that summary response has correct structure."""
+        # Create a single expense
+        expense_data = {
+            'amount': '25.50',
+            'description': 'Test expense',
+            'category': 'Test'
+        }
+        
+        client.post(
+            '/api/expenses',
+            data=json.dumps(expense_data),
+            content_type='application/json'
+        )
+        
+        response = client.get('/api/expenses/summary')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Check top-level structure
+        required_fields = ['total_amount', 'expense_count', 'date_range', 'categories']
+        for field in required_fields:
+            assert field in data
+        
+        # Check date_range structure
+        date_range = data['date_range']
+        assert 'start' in date_range
+        assert 'end' in date_range
+        
+        # Check categories structure
+        categories = data['categories']
+        assert isinstance(categories, list)
+        assert len(categories) == 1
+        
+        category = categories[0]
+        category_fields = ['category', 'amount', 'count']
+        for field in category_fields:
+            assert field in category
+        
+        # Verify data types
+        assert isinstance(data['total_amount'], (int, float))
+        assert isinstance(data['expense_count'], int)
+        assert isinstance(category['amount'], (int, float))
+        assert isinstance(category['count'], int)
+        assert isinstance(category['category'], str)
+    
+    def test_get_summary_no_expenses_in_date_range(self, client):
+        """Test expense summary when no expenses exist in specified date range."""
+        # Create sample expenses
+        self.create_sample_expenses_for_summary(client)
+        
+        # Request summary for a date range with no expenses (future dates)
+        response = client.get('/api/expenses/summary?start_date=2025-02-01T00:00:00Z&end_date=2025-02-28T23:59:59Z')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert data['total_amount'] == 0.0
+        assert data['expense_count'] == 0
+        assert data['categories'] == []
+        assert data['date_range']['start'] == '2025-02-01T00:00:00+00:00'
+        assert data['date_range']['end'] == '2025-02-28T23:59:59+00:00'
