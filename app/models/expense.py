@@ -3,13 +3,12 @@ Expense model for the expense tracker application.
 """
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import Column, Integer, String, DateTime, Numeric, CheckConstraint
-from sqlalchemy.orm import declarative_base, validates
+from sqlalchemy import CheckConstraint
+from sqlalchemy.orm import validates
+from app import db
 
-Base = declarative_base()
 
-
-class Expense(Base):
+class Expense(db.Model):
     """
     Expense model representing a single expense entry.
     
@@ -24,37 +23,37 @@ class Expense(Base):
     """
     __tablename__ = 'expenses'
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    amount = Column(
-        Numeric(10, 2), 
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    amount = db.Column(
+        db.Numeric(10, 2), 
         nullable=False,
         doc="Expense amount in decimal format"
     )
-    description = Column(
-        String(255), 
+    description = db.Column(
+        db.String(255), 
         nullable=False,
         doc="Description of the expense"
     )
-    category = Column(
-        String(100), 
+    category = db.Column(
+        db.String(100), 
         nullable=False, 
         default="Uncategorized",
         doc="Expense category"
     )
-    date = Column(
-        DateTime, 
+    date = db.Column(
+        db.DateTime, 
         nullable=False, 
         default=datetime.utcnow,
         doc="Date when the expense occurred"
     )
-    created_at = Column(
-        DateTime, 
+    created_at = db.Column(
+        db.DateTime, 
         nullable=False, 
         default=datetime.utcnow,
         doc="Record creation timestamp"
     )
-    updated_at = Column(
-        DateTime, 
+    updated_at = db.Column(
+        db.DateTime, 
         nullable=False, 
         default=datetime.utcnow, 
         onupdate=datetime.utcnow,

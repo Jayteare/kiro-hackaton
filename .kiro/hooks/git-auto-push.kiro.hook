@@ -4,7 +4,7 @@
   "description": "Automatically commits and pushes changes to GitHub when any file in the repository is modified",
   "version": "1",
   "when": {
-    "type": "fileEdited",
+    "type": "userTriggered",
     "patterns": [
       "*"
     ]

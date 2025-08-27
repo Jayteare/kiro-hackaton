@@ -19,8 +19,11 @@ def create_app(config_name='default'):
     db.init_app(app)
     ma.init_app(app)
     
-    # Register blueprints (will be added in later tasks)
-    # from app.api import api_bp
-    # app.register_blueprint(api_bp, url_prefix='/api')
+    # Import models to ensure they are registered with SQLAlchemy
+    from app.models import expense
+    
+    # Register blueprints
+    from app.api import api_bp
+    app.register_blueprint(api_bp, url_prefix='/api')
     
     return app

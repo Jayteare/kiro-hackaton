@@ -1,4 +1,4 @@
 # Models package
-from .expense import Expense, Base
+from .expense import Expense
 
-__all__ = ['Expense', 'Base']
+__all__ = ['Expense']

@@ -22,41 +22,78 @@
   - Write unit tests for Expense model validation and constraints
   - _Requirements: 1.1, 1.2, 1.3, 3.4_
 
-- [ ] 3. Create Marshmallow schemas for request/response validation
+- [x] 3. Create Marshmallow schemas for request/response validation
+
+
+
+
+
+
+
+
+
+
+
   - Implement ExpenseSchema for serialization and deserialization
   - Create SummarySchema for expense summary responses
   - Write validation tests for schema edge cases and error handling
   - _Requirements: 1.4, 7.4_
 
-- [ ] 4. Implement expense repository layer
+- [x] 4. Implement expense repository layer
+
+
+
+
+
   - Create ExpenseRepository class with CRUD operations
   - Implement database query methods for filtering and pagination
   - Write unit tests for repository operations with in-memory database
   - _Requirements: 2.1, 2.2, 2.4, 3.2, 4.2_
 
-- [ ] 5. Build expense service layer with business logic
+- [x] 5. Build expense service layer with business logic
+
+
+
+
+
   - Create ExpenseService class with validation and business rules
   - Implement expense creation with category assignment and validation
   - Write unit tests for service layer business logic and validation
   - _Requirements: 1.1, 1.2, 5.1, 5.2_
 
-- [ ] 6. Implement expense CRUD API endpoints
-- [ ] 6.1 Create expense creation endpoint
+- [x] 6. Implement expense CRUD API endpoints
+
+
+
+
+
+
+
+
+- [x] 6.1 Create expense creation endpoint
+
+
   - Implement POST /api/expenses endpoint with validation
   - Add error handling for validation failures and database errors
   - Write integration tests for expense creation scenarios
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 6.2 Create expense retrieval endpoints
+- [x] 6.2 Create expense retrieval endpoints
+
+
   - Implement GET /api/expenses endpoint with pagination support
   - Implement GET /api/expenses/{id} endpoint for single expense retrieval
   - Write integration tests for expense retrieval and pagination
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
+
+
 - [ ] 6.3 Create expense update endpoint
   - Implement PUT /api/expenses/{id} endpoint with partial updates
   - Add validation for expense existence and field validation
   - Write integration tests for expense update scenarios
+
+
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
 - [ ] 6.4 Create expense deletion endpoint
